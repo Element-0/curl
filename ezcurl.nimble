@@ -17,7 +17,7 @@ requires "ezutils"
 const link = "https://github.com/Element-0/Dependencies/releases/download/curl-curl-7_74_0/libcurl.dll"
 
 task prepare, "Prepare libcurl.dll":
-  if not fileExists "./libcurl.dll":
+  if not fileExists "libcurl.dll":
     exec "curl -Lo libcurl.dll " & link
 
 before test:
