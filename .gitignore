@@ -1,0 +1,10 @@
+.vscode
+pkgs
+nimcache
+*.exe
+*.dll
+*.lib
+*.pdb
+*.exp
+*.obj
+*.ilk
