@@ -20,5 +20,8 @@ task prepare, "Prepare libcurl.dll":
   if not fileExists "./libcurl.dll":
     exec "curl -Lo libcurl.dll " & link
 
+before test:
+  prepareTask()
+
 before install:
   prepareTask()
