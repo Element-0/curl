@@ -10,7 +10,7 @@ proc dumpStream(s: Stream): string =
 
 suite "easy":
   setup:
-    var easy = initCurlEasy()
+    var easy = newCurlEasy()
 
   test "simple":
     discard easy

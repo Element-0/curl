@@ -1,4 +1,5 @@
 import streams
+import options as opt
 from strutils import toUpperAscii
 
 import libcurl
@@ -15,6 +16,7 @@ type HttpMethod* {.pure.} = enum
 
 type Easy* = object
   raw: PCurl
+  reads, writes: opt.Option[Stream]
 
 type EasyError* = object of IOError
 
@@ -35,7 +37,7 @@ proc initCurlEasy*(): Easy {.genrefnew.} =
 proc perform*(self: Easy) {.genref.} =
   intoEasyError self.raw.easy_perform()
 
-proc `method=`*(self: Easy, kind: HttpMethod) =
+proc `method=`*(self: Easy, kind: HttpMethod) {.genref.} =
   case kind:
   of HM_GET:
     intoEasyError easy_setopt(self.raw, OPT_HTTPGET, true)
@@ -48,31 +50,35 @@ proc `method=`*(self: Easy, kind: HttpMethod) =
   of HM_HEAD:
     intoEasyError easy_setopt(self.raw, OPT_NOBODY, true)
 
-proc `method=`*(self: Easy, kind: string) =
+proc `method=`*(self: Easy, kind: string) {.genref.} =
   intoEasyError easy_setopt(self.raw, OPT_CUSTOMREQUEST, kind.toUpperAscii)
 
-proc `write=`*(self: Easy, stre: Stream) =
-  intoEasyError easy_setopt(self.raw, OPT_WRITEDATA, stre)
+proc `write=`*(self: var Easy, stre: Stream) {.genref.} =
+  self.writes = some stre
+  intoEasyError easy_setopt(self.raw, OPT_WRITEDATA, addr self)
   intoEasyError easy_setopt(self.raw, OPT_WRITEFUNCTION) do (
       buffer: cstring,
       size: int,
       count: int,
-      outstream: Stream) -> int {.cdecl.}:
+      self: ptr Easy) -> int {.cdecl.}:
+    let stream = self[].writes.unsafeGet()
     result = size * count
     if result == 0:
-      outstream.flush()
+      stream.flush()
     else:
-      outstream.writeData(buffer, result)
+      stream.writeData(buffer, result)
 
-proc `read=`*(self: Easy, stre: Stream) =
-  intoEasyError easy_setopt(self.raw, OPT_READDATA, stre)
+proc `read=`*(self: var Easy, stre: Stream) {.genref.} =
+  self.reads = some stre
+  intoEasyError easy_setopt(self.raw, OPT_READDATA, addr self)
   intoEasyError easy_setopt(self.raw, OPT_READFUNCTION) do (
       buffer: pointer,
       size: int,
       count: int,
-      instream: Stream) -> int {.cdecl.}:
+      self: ptr Easy) -> int {.cdecl.}:
+    let stream = self[].writes.unsafeGet()
     result = size * count
-    result = instream.readData(buffer, result)
+    result = stream.readData(buffer, result)
 
 template `.=`*(self: Easy, field: untyped, value: untyped): untyped =
   const fieldname = astToStr(field)
@@ -114,7 +120,7 @@ template `.`*(self: Easy, field: untyped): untyped =
     code
   elif fieldname =!= "content_type":
     var name: cstring
-    intoEasyError easy_getinfo(self.raw, INFO_CONTENT_TYPE , addr name)
+    intoEasyError easy_getinfo(self.raw, INFO_CONTENT_TYPE, addr name)
     name
   else:
     {.error: "unknown field: " & fieldname.}
