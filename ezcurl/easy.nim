@@ -1,4 +1,5 @@
 import streams
+from strutils import toUpperAscii
 
 import libcurl
 import ezutils
@@ -47,6 +48,9 @@ proc `method=`*(self: Easy, kind: HttpMethod) =
   of HM_HEAD:
     intoEasyError easy_setopt(self.raw, OPT_NOBODY, true)
 
+proc `method=`*(self: Easy, kind: string) =
+  intoEasyError easy_setopt(self.raw, OPT_CUSTOMREQUEST, kind.toUpperAscii)
+
 proc `write=`*(self: Easy, stre: Stream) =
   intoEasyError easy_setopt(self.raw, OPT_WRITEDATA, stre)
   intoEasyError easy_setopt(self.raw, OPT_WRITEFUNCTION) do (
@@ -70,7 +74,7 @@ proc `read=`*(self: Easy, stre: Stream) =
     result = size * count
     result = instream.readData(buffer, result)
 
-template `.=`*(self: Easy, field: untyped, value: untyped) =
+template `.=`*(self: Easy, field: untyped, value: untyped): untyped =
   const fieldname = astToStr(field)
   when fieldname =!= "verbose":
     intoEasyError easy_setopt(self.raw, OPT_VERBOSE, bool value)
@@ -84,7 +88,35 @@ template `.=`*(self: Easy, field: untyped, value: untyped) =
     intoEasyError easy_setopt(self.raw, OPT_REFERER, cstring value)
   elif fieldname =!= "useragent":
     intoEasyError easy_setopt(self.raw, OPT_USERAGENT, cstring value)
+  elif fieldname =!= "follow":
+    intoEasyError easy_setopt(self.raw, OPT_FOLLOWLOCATION, bool value)
+  elif fieldname =!= "maxredirs":
+    intoEasyError easy_setopt(self.raw, OPT_MAXREDIRS, int value)
   else:
     {.error: "unknown field: " & fieldname.}
 
-template `.=`*(self: ref Easy, field: untyped, value: untyped) = `.=`(self[], field, value)
+template `.=`*(self: ref Easy, field: untyped, value: untyped): untyped =
+  `.=`(self[], field, value)
+
+template `.`*(self: Easy, field: untyped): untyped =
+  const fieldname = astToStr(field)
+  when fieldname =!= "url":
+    var name: cstring
+    intoEasyError easy_getinfo(self.raw, INFO_EFFECTIVE_URL, addr name)
+    name
+  elif fieldname =!= "method":
+    var name: cstring
+    intoEasyError easy_getinfo(self.raw, INFO_EFFECTIVE_METHOD, addr name)
+    name
+  elif fieldname =!= "response":
+    var code: clong
+    intoEasyError easy_getinfo(self.raw, INFO_RESPONSE_CODE, addr code)
+    code
+  elif fieldname =!= "content_type":
+    var name: cstring
+    intoEasyError easy_getinfo(self.raw, INFO_CONTENT_TYPE , addr name)
+    name
+  else:
+    {.error: "unknown field: " & fieldname.}
+
+template `.`*(self: ref Easy, field: untyped): untyped = `.`(self[], field)
