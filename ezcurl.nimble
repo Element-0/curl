@@ -11,7 +11,6 @@ skipDirs      = @["tests"]
 # Dependencies
 
 requires "nim >= 1.4.2"
-requires "libcurl >= 1.0.0"
 requires "ezutils"
 
 const link = "https://github.com/Element-0/Dependencies/releases/download/curl-curl-7_74_0/libcurl.dll"

@@ -1,8 +1,7 @@
 import streams
 import options as opt
 from strutils import toUpperAscii
-
-import libcurl
+import bindings
 import ezutils
 
 import common
@@ -15,7 +14,7 @@ type HttpMethod* {.pure.} = enum
   HM_DELETE
 
 type Easy* = object
-  raw: PCurl
+  raw*: PCurl
   reads, writes: opt.Option[Stream]
 
 type EasyError* = object of IOError
@@ -25,11 +24,11 @@ template intoEasyError(err: Code) =
   if ret != E_OK:
     raise newException(EasyError, $easy_strerror(ret))
 
-proc `=destroy`(self: var Easy) =
+proc `=destroy`*(self: var Easy) =
   self.raw.easy_cleanup()
   self.raw = nil
 
-proc `=copy`(self: var Easy, rhs: Easy) {.error.}
+proc `=copy`*(self: var Easy, rhs: Easy) {.error.}
 
 proc initCurlEasy*(): Easy {.genrefnew.} =
   result.raw = easy_init()
