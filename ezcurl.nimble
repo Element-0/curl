@@ -5,6 +5,7 @@ author        = "CodeHz"
 description   = "Curl binding"
 license       = "LGPL-3.0"
 srcDir        = "."
+skipDirs      = @["tests"]
 
 
 # Dependencies
